@@ -1,0 +1,26 @@
+[
+  {
+    "description": "GitHub APIでリポジトリを検索します。プロジェクト情報、言語フィルタ対応で開発チーム向けのリポジトリ検索が可能です。",
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "検索キーワード"
+        },
+        "language": {
+          "type": "string",
+          "description": "プログラミング言語フィルタ（オプション）"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "最大返却件数（デフォルト: 5）"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "search_github_repos"
+  }
+]
