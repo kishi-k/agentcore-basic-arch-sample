@@ -1,14 +1,10 @@
 # AgentCore Basic Architecture Sample (Langfuse)
 Amazon Bedrock AgentCoreを利用したAgentのサンプルです。
-こちらはAgentのベーシックアーキテクチャであるAgentとMCPをホストしたいときに、本番利用に参考になるセキュアかつ運用可能な実装例です。
+このサンプルではAgentのベーシックアーキテクチャであるAgentとMCPをホストしたいときに、本番利用に参考になるセキュアかつ運用可能な実装例です。
 認証認可のやりとりをManagedなAgentCore Identity に任せたアーキテクチャを採用しています。
-このサンプルでは、以下の認証認可を対象としています。
-
-* UserからAgentへのInbound認証
-* AgentからMCPへのOutbound認証
 
 ## サンプルの対象者
-* Amazon Bedrock Runtime をセキュアにアプリケーションに組み込むイメージがわからない方。
+* Amazon Bedrock AgentCoreをセキュアにアプリケーションに組み込むイメージがわからない方。
 * Amazon Bedrock RuntimeでホストしたAgentと、Amazon Bedrock AgentCore GatewayでホストしたMCPとのM2M認証に実装方法がわからない方
 * AgentとMCPという基本構成に対してAgentCoreで実装する際のベーシックな実装方法を理解したい方
 
@@ -40,6 +36,10 @@ curl -X POST "https:/xxxxx/invocations \
 ## Architecture
 Amazon Bedrock AgentCore Runtime + AgentCore Gateway + GitHub API 
 
+* ClientからRuntimeへのアクセスはOAuth2認証でアクセスする
+* RuntimeからGatewayは、Agent Ideneity上でホストされているOAuth2Providerからトークンを取得しGatewayにアクセスする
+* GatewayからGitHubAPIは、publicに公開されているAPIへのアクセスのため認証は不要
+
 
 ## How to deploy
 
@@ -64,8 +64,7 @@ Notebookを実行することで、以下のリソースが立ち上がります
 
 * DiscoveryURL
 * ClientID, ClientSecret
-* Resource Server 
-* 
+* Resource Server name
 
 ### 2. Deploy AgentCore Runtime
 
@@ -113,7 +112,7 @@ ENV IDENTITY_OAUTH_PROVIDER=resource-provider-oauth-client-xxxxx
 ```
 
 Gatewayのスコープは、Amazon Cognitoで設定されているスコープを利用します。
-手順１でセットアップを行なっている場合、 `{resourceServer}/invoke` となっています。詳細は以下を確認してください。
+手順１でセットアップを行なっている場合、 `{resourceServer}/invoke` となっています。詳細は以下を確認してください。  
 https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html#cognito-user-pools-define-resource-servers-about-resource-servers
 
 
@@ -133,9 +132,7 @@ aws iam attach-role-policy \
 ```
 
 
-実際にデプロイできたら、invokeしてみます。
-
-環境変数では以下を設定しておくとスムーズです。
+実際にデプロイできたら、invokeしてみます。環境変数に以下を設定しておくとスムーズです。
 
 * CLIENT_ID
 * CLIENT_SECRET
@@ -179,7 +176,6 @@ Response：
 ```
 
 ### (Optional) Setup Sender to Slack 
-アプリケーションの組み込み例として、定期的にGitHubのトレンドレポジトリをSlackにポストするコードを用意しています。   
-`send-slack` 以下のコードをLambdaにデプロイすることで、送付することができます。
+アプリケーションの組み込み例として、定期的にGitHubのトレンドレポジトリをSlackにポストするコードを用意しています。`send-slack` 以下のコードをLambdaにデプロイすることで、送付することができます。
 
 
