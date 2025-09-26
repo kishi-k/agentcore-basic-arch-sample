@@ -4,7 +4,7 @@ Amazon Bedrock AgentCoreを利用したAgentのサンプルです。
 認証認可のやりとりをManagedなAgentCore Identity に任せたアーキテクチャを採用しています。
 
 ## サンプルの対象者
-* Amazon Bedrock AgentCoreをセキュアにアプリケーションに組み込むイメージがわからない方。
+* Amazon Bedrock AgentCoreをセキュアにアプリケーションに組み込むイメージがわからない方
 * Amazon Bedrock RuntimeでホストしたAgentと、Amazon Bedrock AgentCore GatewayでホストしたMCPとのM2M認証に実装方法がわからない方
 * AgentとMCPという基本構成に対してAgentCoreで実装する際のベーシックな実装方法を理解したい方
 
@@ -34,11 +34,14 @@ curl -X POST "https:/xxxxx/invocations \
 
 
 ## Architecture
-Amazon Bedrock AgentCore Runtime + AgentCore Gateway + GitHub API 
+
+![image](doc/image.jpg)
+
 
 * ClientからRuntimeへのアクセスはOAuth2認証でアクセスする
 * RuntimeからGatewayは、Agent Ideneity上でホストされているOAuth2Providerからトークンを取得しGatewayにアクセスする
-* GatewayからGitHubAPIは、publicに公開されているAPIへのアクセスのため認証は不要
+* InboundとOutboundは認証ユーザーに沿って積集合となるようなスコープ設定が必要になるので、それを見据えて同じUserPoolを利用（AgentCoreは非対応）
+* GatewayからGitHub APIは、publicに公開されているAPIへのアクセスのため認証は不要
 
 
 ## How to deploy
