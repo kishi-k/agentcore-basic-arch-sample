@@ -1,18 +1,14 @@
 import os
 import requests
-from dotenv import load_dotenv
 from bedrock_agentcore.identity.auth import requires_access_token
 import logging
-from dotenv import load_dotenv
 import asyncio
-import json
 
 # Import Strands Agents SDK
 from strands import Agent
-from strands.models import BedrockModel
-from strands.agent.conversation_manager import SlidingWindowConversationManager
 from mcp.client.streamable_http import streamablehttp_client
 from strands.tools.mcp import MCPClient
+from strands.telemetry import StrandsTelemetry
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
 from pydantic import BaseModel, Field
@@ -26,7 +22,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize Strands Telemetry for OTEL
+strands_telemetry = StrandsTelemetry()
+strands_telemetry.setup_otlp_exporter()
+logger.info("OTEL Telemetry initialized")
 
+
+ACCESS_TOKEN = ""
 GATEWAY_ENDPOINT = os.getenv("GATEWAY_ENDPOINT", "endpoint")
 GATEWAY_SCOPE = os.getenv("GATEWAY_SCOPE", "scope")
 IDENTITY_OAUTH_PROVIDER = os.getenv("IDENTITY_OAUTH_PROVIDER", "provider")
@@ -63,9 +65,6 @@ def fetch_access_token(client_id, client_secret, token_url):
     return response.json()["access_token"]
 
 
-ACCESS_TOKEN = ""
-
-
 @requires_access_token(
     provider_name=IDENTITY_OAUTH_PROVIDER,
     scopes=[GATEWAY_SCOPE],
@@ -82,7 +81,6 @@ def run_agent(prompt: str):
         # 直接Cognitoからアクセストークンを取得
         # access_token = fetch_access_token(CLIENT_ID, CLIENT_SECRET, TOKEN_URL)
         asyncio.run(get_access_token(access_token=""))
-
         logger.info(f"Access token obtained: {ACCESS_TOKEN[:20]}...")
 
         headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
@@ -98,11 +96,11 @@ def run_agent(prompt: str):
             logger.info(f"Tools retrieved: {len(tools)} tools available")
 
             agent = Agent(
-                model="anthropic.claude-3-5-haiku-20241022-v1:0",
+                model="us.anthropic.claude-sonnet-4-5-20250929-v1:0",
                 tools=tools,
                 system_prompt="""
                 You are an AI assistant for searching GitHub repo and Issues. Help the user with their query.
-                You have access to tools that can retrieve GitHub Platform data.
+                You have access to tools that can retrieve GitHub Platform data. Use MCP tool if you need to access GitHib repo.
                 """,
             )
             logger.info("Agent created successfully")
@@ -134,7 +132,6 @@ def invoke(payload):
 
         result = run_agent(user_message)
 
-        # result = agent(user_message) d
         if not result:
             raise Exception("no response")
 

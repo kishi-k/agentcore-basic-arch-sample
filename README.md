@@ -7,6 +7,7 @@ Amazon Bedrock AgentCoreを利用したAgentのサンプルです。
 * Amazon Bedrock AgentCoreをセキュアにアプリケーションに組み込むイメージがわからない方
 * Amazon Bedrock RuntimeでホストしたAgentと、Amazon Bedrock AgentCore GatewayでホストしたMCPとのM2M認証に実装方法がわからない方
 * AgentとMCPという基本構成に対してAgentCoreで実装する際のベーシックな実装方法を理解したい方
+* Strands Telemetryを利用し、Langfuseなどの3rd partyのobservability toolを利用したい方
 
 
 ## 実装機能
@@ -29,8 +30,8 @@ curl -X POST "https:/xxxxx/invocations \
   "summary": "A comprehensive course for Spring Framework 5 and Spring Boot 2 development. Covers web development, Spring MVC, Spring Data JPA, Hibernate, Thymeleaf, reactive programming, and best practices like Test Driven Development (TDD) and Continuous Integration."
 }
 ```
-
-アプリケーションの組み込み例として、Slack上に定期的に人気のレポジトリをポストしてくれるワークフローのサンプルも用意しています。
+Langfuseを利用して、`invocations`のTrace情報などを分析することができます。
+![img](./doc/img1.png)
 
 
 ## Architecture
@@ -71,11 +72,11 @@ Notebookを実行することで、以下のリソースが立ち上がります
 
 ### 2. Deploy AgentCore Runtime
 
-AgentCore Runtimeをデプロイします。
+AgentCore Runtimeをデプロイします。Langfuseにログを送信するため、 `disable-otel` を `true`にしておきます。
 
 ```bash
 cd runtime/
-agentcore configure --entrypoint main.py  --name githubagent
+agentcore configure --entrypoint main.py  --name githubagent --disable-otel true
 ```
 
 実行すると oauth2 の認証設定が求められるので、Gatewayで作成したCognito UserPoolの設定を利用して入力してください
@@ -86,11 +87,19 @@ Enter OAuth discovery URL: xxxxx
 Enter allowed OAuth client IDs (comma-separated): xxxxx
 ```
 
-デプロイ用のコマンドを実行します。
+Langfuseへのアクセス用トークンを生成します。LangfuseのSettings > API Keys より、”Create new API keys”をクリックし、生成されたPublic KeyとSecret Keyを控えます。
+
+![img](./doc/img2.png)
 
 ```bash
-agentcore launch
+LANGFUSE_TOKEN=$(echo -n "{YOUR_PUBLIC_KEY}:{YOUR_SECRET_KEY}" | base64)
 ```
+AgentCore Runtimeのデプロイ用のコマンドを実行します。
+
+```bash 
+agentcore launch --env OTEL_EXPORTER_OTLP_ENDPOINT=https://us.cloud.langfuse.com/api/public/otel --env OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic {$LANGFUSE_TOKEN}" --env DISABLE_ADOT_OBSERVABILITY=true --env BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0
+```
+
 
 
 ### 3. Setup AgentCore Runtime Outbound Auth
@@ -100,7 +109,7 @@ agentcore launch
 1. まずは、AgentCore IdentityのOAuth provider を作成します。
 
 
-* CliendID、ClientSecret等は1で設定したClientを利用してください。  
+* Cliend ID、Client Secret等は1で設定したClientを利用してください。  
   * https://docs.aws.amazon.com/ja_jp/bedrock-agentcore/latest/devguide/identity-add-oauth-client-custom.html
 * CLIの場合はこちらを適宜変えて実行してください。  
   * https://docs.aws.amazon.com/ja_jp/bedrock-agentcore/latest/devguide/identity-getting-started-step2.html
@@ -178,7 +187,5 @@ Response：
 }
 ```
 
-### (Optional) Setup Sender to Slack 
-アプリケーションの組み込み例として、定期的にGitHubのトレンドレポジトリをSlackにポストするコードを用意しています。`send-slack` 以下のコードをLambdaにデプロイすることで、送付することができます。
 
 
